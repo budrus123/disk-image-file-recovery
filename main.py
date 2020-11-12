@@ -1,13 +1,14 @@
-##################   Imports  ##################
+##################   Imports  ################################
 
-import binascii
 import re
 
 
-################## Constants ##################
+################## File headers and footers ##################
 
-pdf_header_string = "25504446" #hex
-pdf_footer_string = "0A2525454F46" #hex
+disk_image_name = 'Project2.dd'
+
+pdf_header_string = '25504446'
+pdf_footer_string = '0A2525454F46'
 
 gif_header_string = '474946383961'
 gif_footer_string = '003B'
@@ -24,13 +25,29 @@ gif_footer_string = '003B'
 
 
 supported_types = ['MPG', 'PDF','BMP','GIF','ZIP','JPG','DOCX','AVI','PNG']
-supported_types = ['PDF','DOCX', 'AVI']
-supported_types = ['GIF']
+supported_types = ['PDF','AVI']
+
+"""
+Variables for the program run:
+Signature is a dictionary has different file types (key),
+each element has the header and footer string in it
+
+image_bytes contains the disk image bytes (type: bytes)
+
+bytes_hex contains the disk image bytes (as a string) in hex (type: string)
+note that bytes_hex is used to look for the headers, it is a string with no spaces
+in between the bytes
+"""
 
 signatures = {}
 image_bytes = ""
 bytes_hex = ""
 
+"""
+Helper function that takes a string and 
+returns the string as a string of pairs of bytes
+split by spaces. eg: AB32FF => AB 32 FF
+"""
 def hex_to_readable_line(hex_line):
     string = ""
     n = 2
@@ -39,7 +56,12 @@ def hex_to_readable_line(hex_line):
         string += str(element) + " "
     return string
 
-#removes headers that don't start at sectors (512) and cluster
+
+"""
+Function that removes headers that don't 
+start at sectors (512) and returns the 
+valid header locations only
+"""
 def remove_illegal_headers(headers):
     valid_headers = headers
     for occurrence in headers:
@@ -49,37 +71,60 @@ def remove_illegal_headers(headers):
     return valid_headers
 
 
+"""
+Function that takes a substring and a string
+and returns all the locations (indexes) that 
+the substring occurs in that string
+eg: "ab", "ggtab" are substring and string
+this would return 3
+"""
 def find_all_occurrences(substring, string):
     return [m.start() for m in re.finditer(substring, string)]
 
 
+"""
+Function that takes the byte location (in the string of hex)
+and returns the byte offset for that location. This simply 
+returns the index of the header divided by 2
+this is because the hex string has no spaces,
+and bytes are two chars each
+"""
 def get_offset_for_location(byte_location):
     return int(byte_location/2)
 
 
+"""
+Initialization function for the signature dictionaries
+"""
 def init_signatures():
     for file_type in supported_types:
         signature = {}
-        signature['header'] = ""
-        signature['footer'] = ""
+        signature['header'] = ''
+        signature['footer'] = ''
         signatures[file_type] = signature
 
-    # #PDF
-    # signatures['PDF']['header'] = pdf_header_string
-    # signatures['PDF']['footer'] = pdf_footer_string
-    #
-    # #DOCX
+    #PDF
+    signatures['PDF']['header'] = pdf_header_string
+    signatures['PDF']['footer'] = pdf_footer_string
+
+    #DOCX
     # signatures['DOCX']['header'] = docx_header_string
     # signatures['DOCX']['footer'] = docx_footer_string
 
     #AVI
-    # signatures['AVI']['header'] = AVI_header_string
-    # signatures['AVI']['footer'] = ''
+    signatures['AVI']['header'] = AVI_header_string
+    signatures['AVI']['footer'] = ''
 
     #GIF
-    signatures['GIF']['header'] = gif_header_string
-    signatures['GIF']['footer'] = gif_footer_string
+    # signatures['GIF']['header'] = gif_header_string
+    # signatures['GIF']['footer'] = gif_footer_string
 
+
+"""
+Function to open the file (dd image)
+and store the bytes and string of hex in a 
+global variable.
+"""
 def open_file(path):
     global image_bytes, bytes_hex
     with open(path, 'rb') as f:
@@ -88,7 +133,11 @@ def open_file(path):
 
 
 
-# pdf files have multiple footers per file
+"""
+Handling function for PDF files. 
+Note that PDF files have multiple 
+footers (might) for a single file
+"""
 def handle_pdf(headers, footers):
     header_count = len(headers)
     footer_count = len(footers)
@@ -96,13 +145,31 @@ def handle_pdf(headers, footers):
     file_start = -1
     file_end = -1
     footer_iterator = -1
+
+    """
+    if no headers found, return.
+    """
     if header_count == 0 :
         return
 
-    current_offset = headers[0]
+    """
+    Loop the header locations
+    """
     for index in range(header_count):
+
+        """
+        The start of the file, is always the current
+        header in the sequence
+        """
         file_start = get_offset_for_location(headers[index])
-        #reached last header
+
+        """
+        If last header, then for sure the footer for this file,
+        is the last possible footer. End = last footer.
+        
+        If not last header, then the footer for this file,
+        will be the last footer with an offset before the current header.
+        """
         if index == (header_count - 1):
             # add 6 for file footer length
             file_end = get_offset_for_location(footers[footer_count - 1] + 6)
@@ -112,22 +179,38 @@ def handle_pdf(headers, footers):
                 footer_iterator +=1
             file_end = get_offset_for_location(footers[footer_iterator - 1]) + 6
 
+        """
+        Carve bytes out from the image bytes
+        """
         file_bytes = image_bytes[file_start:file_end]
         f = open('pdf_'+str(index)+'.pdf', 'wb')
         f.write(file_bytes)
         f.close()
 
 
-
-
+"""
+Handling function for AVI files. 
+Note that AVI files have
+the size of the file 
+in the header
+"""
 def handle_avi(headers):
 
     header_count = len(headers)
     print(headers)
 
+    """
+    if no headers found, return.
+    """
     if header_count == 0 :
         return
 
+    """
+    for each header, get size from the start of the header + 4
+    the end of the size will be at the size start +3
+    then convert that size to little indian 
+    and carve file out
+    """
     for index,header in enumerate(headers):
         byte_offset = get_offset_for_location(header)
         size_start = byte_offset + 4
@@ -140,75 +223,23 @@ def handle_avi(headers):
         f.write(file_bytes)
         f.close()
 
-def handle_gif(headers, footers):
 
-    header_count = len(headers)
-    footer_count = len(footers)
-    print(headers)
+################## Main ######################################
 
-    if header_count == 0:
-        return
-
-    for index, header in enumerate(headers):
-        start = header
-        footer_iterator = 0
-        while footer_iterator < footer_count:
-            if footers[footer_iterator] > header:
-                break
-            footer_iterator += 1
-
-        end = footers[footer_iterator]
-        print(end)
-        file_start = get_offset_for_location(start)
-        file_end = get_offset_for_location(end) + 2 #footer is 2 bytes
-        file_bytes = image_bytes[file_start:file_end]
-        f = open('gif_' + str(index) + '.gif', 'wb')
-        f.write(file_bytes)
-        f.close()
-
-
-# docx files have multiple headers per file
-def handle_docx(headers, footers):
-    header_count = len(headers)
-    footer_count = len(footers)
-
-    print(headers)
-    print(footers)
-
-    # to find correct headers
-    header_iterator = 0
-    file_start = -1
-    file_end = -1
-
-    if header_count == 0:
-        return
-
-    file_start = get_offset_for_location(9502720)
-    file_end = get_offset_for_location(17834478) + 22
-
-    file_bytes = image_bytes[file_start:file_end]
-    f = open('docx_' + 'ss' + '.docx', 'wb')
-    f.write(file_bytes)
-    f.close()
-
-    # for index in range(footer_count):
-    #     file_start = get_offset_for_location(headers[header_iterator])
-    #     file_end = get_offset_for_location(footers[index]) + 22
-    #
-    #     file_bytes = image_bytes[file_start:file_end]
-    #     f = open('docx_' + str(index) + '.docx', 'wb')
-    #     f.write(file_bytes)
-    #     f.close()
-
-################## Main ##################
-
-
+"""
+Initialization signatures and open the file
+"""
 init_signatures()
-open_file('Project2.dd')
+open_file(disk_image_name)
 
-# print(find_all_occurrences('474946383961', bytes_hex))
-print(find_all_occurrences('003B', bytes_hex))
-
+"""
+Loop all the signatures in the signatures dictionary and one by one do:
+    1. get the header and footer for the file type
+    2. get the locations of the header
+    3. remove the illegal header locations
+    4. if file has footers, find the location of the footers
+    5. send header locations, footer locations to appropriate handling function
+"""
 for sig in signatures:
     sig_header = signatures[sig]['header']
     sig_footer = signatures[sig]['footer']
@@ -221,9 +252,5 @@ for sig in signatures:
 
     if sig == 'PDF':
         handle_pdf(header_occ, footer_occ)
-    elif sig == 'DOCX':
-        handle_docx(header_occ, footer_occ)
     elif sig == 'AVI':
         handle_avi(header_occ)
-    elif sig == 'GIF':
-        handle_gif(header_occ, footer_occ)
