@@ -1,4 +1,4 @@
-Project2.dd
+*.dd
 *.docx
 *.avi
 *.gif
@@ -7,3 +7,5 @@ Project2.dd
 *.pdf
 *.mp3
 *.bmp
+*.jpg
+*.png
