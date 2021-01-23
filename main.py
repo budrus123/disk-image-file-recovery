@@ -6,8 +6,8 @@ import shutil
 
 ################## Constants ##################
 
-supported_types = ['MPEG','PDF','BMP','GIF','JPG','JPG_FFDB','DOCX','AVI','PNG']
-disk_image_name = 'Mystery.dd'
+supported_types = ['MPEG', 'PDF', 'BMP', 'GIF', 'JPG', 'JPG_FFDB', 'DOCX', 'AVI', 'PNG']
+disk_image_name = 'Project2Updated.dd'
 
 ################## File headers and footers ##################
 
@@ -38,7 +38,6 @@ bmp_header_string = '424D'
 
 mpeg_header_string = '000001B3'
 mpeg_footer_string = '000001B7'
-
 
 """
 Variables for the program run:
@@ -72,11 +71,12 @@ returns the string as a string of pairs of bytes
 split by spaces. eg: AB32FF => AB 32 FF
 """
 
+
 def hex_to_readable_line(hex_line):
     string = ""
     n = 2
     out = [(hex_line[i:i + n]) for i in range(0, len(hex_line), n)]
-    for element  in out:
+    for element in out:
         string += str(element) + " "
     return string
 
@@ -86,6 +86,8 @@ Function that removes headers that don't
 start at sectors (512) and returns the 
 valid header locations only
 """
+
+
 def remove_illegal_headers(headers):
     valid_headers = []
     for occurrence in headers:
@@ -99,6 +101,8 @@ def remove_illegal_headers(headers):
 Function that removes footers that appear
 before any header for a certain file type
 """
+
+
 def remove_illegal_footers(footers, headers):
     valid_footers = []
     for occurrence in footers:
@@ -115,6 +119,7 @@ eg: "ab", "ggtab" are substring and string
 this would return 3
 """
 
+
 def find_all_occurrences(substring, string):
     return [m.start() for m in re.finditer(substring, string)]
 
@@ -126,13 +131,17 @@ returns the index of the header divided by 2
 this is because the hex string has no spaces,
 and bytes are two chars each
 """
+
+
 def get_offset_for_location(byte_location):
-    return int(byte_location/2)
+    return int(byte_location / 2)
 
 
 """
 Initialization function for the signature dictionaries
 """
+
+
 def init_signatures():
     for file_type in supported_types:
         signature = {}
@@ -176,18 +185,18 @@ def init_signatures():
     signatures['MPEG']['footer'] = mpeg_footer_string
 
 
-
 """
 Function to open the file (dd image)
 and store the bytes and string of hex in a 
 global variable.
 """
 
+
 def open_file(path):
     global image_bytes, bytes_hex
     with open(path, 'rb') as f:
-        image_bytes = f.read() #bytes
-        bytes_hex = image_bytes.hex().upper() #string
+        image_bytes = f.read()  # bytes
+        bytes_hex = image_bytes.hex().upper()  # string
 
 
 '''
@@ -195,8 +204,10 @@ Function that takes array of bytes
 and name and writes these bytes
 to this file name
 '''
+
+
 def write_bytes(bytes, filename):
-    path = os.getcwd() + recovered_dir+ '/'+filename
+    path = os.getcwd() + recovered_dir + '/' + filename
     f = open(path, 'wb')
     f.write(bytes)
     f.close()
@@ -213,7 +224,7 @@ def get_empty_recovered_element():
 
 def make_recovery_directory():
     path = os.getcwd()
-    path +=recovered_dir
+    path += recovered_dir
     if os.path.exists(path):
         shutil.rmtree(path)
     os.mkdir(path)
@@ -224,19 +235,22 @@ def make_recovery_directory():
     Output: sha256 value (string) if valid input file
     Output: None if invalid input file
 '''
+
+
 def get_sha256(filename):
     import hashlib
-    path = os.getcwd() + recovered_dir+ '/'+filename
+    path = os.getcwd() + recovered_dir + '/' + filename
     file_bytes = None
     readable_hash = None
     try:
-        with open(path,"rb") as f:
-            file_bytes = f.read() # read entire file as bytes
+        with open(path, "rb") as f:
+            file_bytes = f.read()  # read entire file as bytes
             readable_hash = hashlib.sha256(file_bytes).hexdigest()
     except Exception as e:
         print(e)
         return None
     return readable_hash
+
 
 ################## Handling functions ##################
 
@@ -245,6 +259,8 @@ def get_sha256(filename):
 """
 Handling of Generic Files
 """
+
+
 def handle_generic(headers, footers, file_name, file_extension, footer_length):
     header_count = len(headers)
     footer_count = len(footers)
@@ -252,7 +268,7 @@ def handle_generic(headers, footers, file_name, file_extension, footer_length):
     """
     if no headers found, return.
     """
-    if header_count == 0 :
+    if header_count == 0:
         return
 
     """
@@ -269,36 +285,30 @@ def handle_generic(headers, footers, file_name, file_extension, footer_length):
         """
         If last header, then for sure the footer for this file,
         is the last possible footer. End = last footer.
-        
+
         If not last header, then the footer for this file,
         will be the last footer with an offset less than the 
         following header (header at index + 1).
         """
         if index == (header_count - 1):
-            #the number of bytes in the footer are added to the file
-            #to carve until the end of the footer
+            # the number of bytes in the footer are added to the file
+            # to carve until the end of the footer
             file_end = get_offset_for_location(footers[footer_count - 1]) + footer_length
         else:
             footer_iterator = 0
-            while footers[footer_iterator] < headers[index+1]:
-                footer_iterator +=1
+            while footers[footer_iterator] < headers[index + 1]:
+                footer_iterator += 1
             file_end = get_offset_for_location(footers[footer_iterator - 1]) + footer_length
 
         if file_extension == 'pdf':
-
-            if index == (header_count - 1):
-                location = footers[footer_count - 1]
-                print(bytes_hex[location: location+100])
+            if index == 0:
+                file_end += 2
             else:
-                location = footers[footer_iterator - 1]
-                print(bytes_hex[location: location + 100])
-
-            file_end += 1
-
+                file_end += 1
         """
         Carve bytes out from the image bytes
         """
-        output_name = file_name +'_'+str(index)+'.'+file_extension
+        output_name = file_name + '_' + str(index) + '.' + file_extension
         write_bytes(image_bytes[file_start:file_end], output_name)
 
         file_element = get_empty_recovered_element()
@@ -317,6 +327,7 @@ def handle_generic(headers, footers, file_name, file_extension, footer_length):
 """
 Handling of PNG Files
 """
+
 
 def handle_png(headers, footers, file_name, file_extension, footer_length):
     header_count = len(headers)
@@ -363,6 +374,7 @@ def handle_png(headers, footers, file_name, file_extension, footer_length):
         file_element['sha'] = get_sha256(output_name)
         recovered_files.append(file_element)
 
+
 ############## END OF PNG HANDLING #####################
 
 ############## START OF AVI HANDLING #####################
@@ -372,12 +384,14 @@ Note that AVI files have
 the size of the file 
 in the header
 """
+
+
 def handle_avi(headers):
     header_count = len(headers)
     """
     if no headers found, return.
     """
-    if header_count == 0 :
+    if header_count == 0:
         return
 
     """
@@ -386,7 +400,7 @@ def handle_avi(headers):
     then convert that size to little indian 
     and carve file out
     """
-    for index,header in enumerate(headers):
+    for index, header in enumerate(headers):
         byte_offset = get_offset_for_location(header)
         size_start = byte_offset + 4
         size_end = size_start + 4
@@ -405,6 +419,7 @@ def handle_avi(headers):
         file_element['end'] = file_end
         file_element['sha'] = get_sha256(file_name)
         recovered_files.append(file_element)
+
 
 ############## END OF AVI HANDLING #####################
 
@@ -442,8 +457,6 @@ def handle_jpg(headers, footers, file_name, file_extension, footer_length):
             footer_iterator += 1
         file_end = get_offset_for_location(footers[footer_iterator]) + footer_length
 
-
-
         """
         Carve bytes out from the image bytes
         """
@@ -456,6 +469,7 @@ def handle_jpg(headers, footers, file_name, file_extension, footer_length):
         file_element['end'] = file_end
         file_element['sha'] = get_sha256(output_name)
         recovered_files.append(file_element)
+
 
 ############## END OF JPG HANDLE #####################
 
@@ -506,7 +520,7 @@ def handle_bmp(headers):
         reserved_section_end = reserved_section_start + 4
         reserved_section = int.from_bytes(image_bytes[reserved_section_start:reserved_section_end], "little")
         if (reserved_section != 0):
-            #Note: Reserved section not all 0s. Ignoring this false positive
+            # Note: Reserved section not all 0s. Ignoring this false positive
             continue
 
         # Creating the file
@@ -523,6 +537,7 @@ def handle_bmp(headers):
         file_element['sha'] = get_sha256(name_to_use)
         recovered_files.append(file_element)
 
+
 ############## END OF BMP HANDLE #####################
 
 
@@ -535,6 +550,7 @@ Assumes MPG-1 Footer 0x00 00 01 B7
 
 MPEG-1 Files are carved from header to footer.
 """
+
 
 ############## START OF MPEG HANDLE #####################
 
@@ -598,6 +614,7 @@ def handle_mpeg(headers, footers):
         file_element['sha'] = get_sha256(name_to_use)
         recovered_files.append(file_element)
 
+
 ############## END OF MPEG HANDLE #####################
 
 
@@ -627,39 +644,37 @@ for sig in signatures:
     header_occ = find_all_occurrences(sig_header, bytes_hex)
     header_occ = remove_illegal_headers(header_occ)
 
-    if sig_footer != '' and sig == 'PDF':
+    if sig_footer != '':
         footer_occ = find_all_occurrences(sig_footer, bytes_hex)
         footer_occ = remove_illegal_footers(footer_occ, header_occ)
 
     if sig == 'PDF':
-        print(header_occ)
-        print(footer_occ)
-        handle_generic(header_occ, footer_occ,'pdf_file','pdf', 6)
-    # elif sig == 'AVI':
-    #     handle_avi(header_occ)
-    # elif sig == 'DOCX':
-    #     handle_generic(header_occ, footer_occ, 'document', 'docx', 22)
-    # elif sig == 'GIF':
-    #     handle_generic(header_occ, footer_occ, 'gif_file', 'gif', 2)
-    # elif sig == 'PNG':
-    #     handle_png(header_occ, footer_occ, 'png_file', 'png',8)
-    # elif sig == 'JPG':
-    #     handle_jpg(header_occ, footer_occ, 'jpg_file', 'jpg', 2)
-    # elif sig == 'JPG_FFDB':
-    #     handle_jpg(header_occ, footer_occ, 'jpg_ffdb', 'jpg', 2)
-    # elif sig == 'BMP':
-    #     handle_bmp(header_occ)
-    # elif sig == 'MPEG':
-    #     handle_mpeg(header_occ, footer_occ)
+        handle_generic(header_occ, footer_occ, 'pdf_file', 'pdf', 6)
+    elif sig == 'AVI':
+        handle_avi(header_occ)
+    elif sig == 'DOCX':
+        handle_generic(header_occ, footer_occ, 'document', 'docx', 22)
+    elif sig == 'GIF':
+        handle_generic(header_occ, footer_occ, 'gif_file', 'gif', 2)
+    elif sig == 'PNG':
+        handle_png(header_occ, footer_occ, 'png_file', 'png', 8)
+    elif sig == 'JPG':
+        handle_jpg(header_occ, footer_occ, 'jpg_file', 'jpg', 2)
+    elif sig == 'JPG_FFDB':
+        handle_jpg(header_occ, footer_occ, 'jpg_ffdb', 'jpg', 2)
+    elif sig == 'BMP':
+        handle_bmp(header_occ)
+    elif sig == 'MPEG':
+        handle_mpeg(header_occ, footer_occ)
 
 '''
 Printing the found files and their info
 '''
 
 number_of_recovered_files = len(recovered_files)
-print("The disk image contains " + str(number_of_recovered_files) +" files")
+print("The disk image contains " + str(number_of_recovered_files) + " files")
 
 for file in recovered_files:
-    print(file['name'] + ', Start offset: ' + hex(file['start']) + ', End Offset: '+ hex(file['end']))
+    print(file['name'] + ', Start offset: ' + hex(file['start']) + ', End Offset: ' + hex(file['end']))
     print('SHA-256: ' + file['sha'])
     print()
