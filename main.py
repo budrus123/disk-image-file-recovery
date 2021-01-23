@@ -62,7 +62,7 @@ signatures = {}
 image_bytes = ""
 bytes_hex = ""
 recovered_files = []
-recovered_dir = '/recovered_pdf'
+recovered_dir = '/recovered'
 
 ################## Helper and utility functions ##################
 
