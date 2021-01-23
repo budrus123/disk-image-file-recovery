@@ -17,7 +17,7 @@ INSTALLATION
 ------------
 
 ```sh
-$ python main.py mystery.dd
+$ python main.py <file_name.dd>
 ```
 
 

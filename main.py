@@ -3,6 +3,7 @@
 import re
 import os
 import shutil
+import sys
 
 ################## Constants ##################
 
@@ -624,6 +625,7 @@ def handle_mpeg(headers, footers):
 """
 Initialization signatures and open the file
 """
+disk_image_name = sys.argv[1]
 open_file(disk_image_name)
 init_signatures()
 make_recovery_directory()
