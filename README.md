@@ -1,33 +1,21 @@
+# Disk Image File Recovery
+
 CONTENTS OF THIS FILE
 ---------------------
 
  * Introduction
- * Requirements
  * Installation
- * Configuration
- * Maintainers
-
 
 INTRODUCTION
 ------------
-
-
-
-
-REQUIREMENTS
-------------
-
-This module requires no modules outside of Drupal core.
+A python project to recover files from a disk image. The supported recoverable files are [MPG, PDF, BMP, GIF, ZIP, JPG, DOCX, AVI, and PNG].
+In addition to recovering the files, the project also finds the SHA-256 value for each of the recovered files.
 
 
 INSTALLATION
 ------------
 
-Install the Easy Breadcrumb module as you would normally install a contributed
-Drupal module. Visit https://www.drupal.org/node/1897420 for further
-information.
 
 
-CONFIGURATION
--------------
+
 
